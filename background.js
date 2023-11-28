@@ -23,9 +23,6 @@ function handle_request(details) {
 }
 
 chrome.runtime.onInstalled.addListener(function() {
-    chrome.webNavigation.onBeforeNavigate.addListener(function(naviator) {
-        console.log("go to " + naviator.url);
-    });
     chrome.runtime.onMessage.addListener(function(req, sender, sendResponse) {
         console.log("recv message " + JSON.stringify(req));
         sendResponse({"msg":"active", "id":chrome.runtime.id});
@@ -45,7 +42,7 @@ function callApi(init_url, url, headers) {
                     console.log(headers[i].name, headers[i].value);
                     pass_header[headers[i].name]=headers[i].value;
                 }
-                download_url = "http://crt.aitata.club/m3u8/?m3u8="+url+"&token="+TOKEN + "&epname="+ epname +"&header=" +encodeURIComponent(JSON.stringify(pass_header));
+                download_url = "http://crt.87868.ink/m3u8/?m3u8="+url+"&token="+TOKEN + "&epname="+ epname +"&header=" +encodeURIComponent(JSON.stringify(pass_header));
                 fetch(download_url).then(function(resp){}).catch(function(ex){console.log(ex);});
                 break;
             }

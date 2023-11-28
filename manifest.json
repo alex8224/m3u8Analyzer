@@ -1,14 +1,16 @@
 {
-  "manifest_version": 3,
+  "manifest_version": 2,
   "name": "Request Monitor",
   "version": "1.0",
   "description": "Monitors requests and extracts m3u8 URLs.",
-  "permissions": ["webRequest", "tabs", "webNavigation"],
+  "permissions": ["webRequest", "tabs", "https://www.olevod.com/", "https://europe.olemovienews.com/", "https://xiaobaotv.net/", "https://m3u.haiwaikan.com/", "https://*.mushroomtrack.com/"],
   "background": {
-    "service_worker": "background.js"
+      "scripts":["background.js"],
+      "persistent": true
   },
-  "host_permissions": ["https://www.olevod.com/", "https://europe.olemovienews.com/", "https://xiaobaotv.net/", "https://m3u.haiwaikan.com/", "https://*.mushroomtrack.com/","https://jable.tv/", "https://*.phncdn.com/", "https://*.pornhub.com/"],
-  "optional_host_permissions": [ "*://*/*"],
+  "optional_permissions": [
+    "*://*/*"
+  ],
   "icons": {
     "16": "icon.png",
     "48": "icon.png",
