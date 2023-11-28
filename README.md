@@ -12,8 +12,6 @@ Explore a smarter way to manage and optimize M3U8 content effortlessly.
 Download Chrome WebStore
 
 # TODO
-1. Fixing the manifest V3 problem: the Chrome extension WebRequest event appears to be unable to wake up the service worker.
-2. build new playlist
+1. build new playlist
 2. support call local player
-
-
+3. support keyframe 
