@@ -17,7 +17,7 @@
     "128": "icon.png"
   },
   "content_scripts":[{
-      "matches":["https://xiaobaotv.net/*", "https://www.olevod.com/*","https://jable.tv/*", "https://*.pornhub.com/*"],
+      "matches":["https://xiaobaotv.net/*", "https://www.olevod.com/*"],
       "js":["foreground.js"]
   }]
 }
