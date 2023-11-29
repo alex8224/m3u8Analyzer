@@ -52,7 +52,7 @@ function callApi(init_url, url, headers) {
 
 function parse_epname(title) {
     console.log("标题名 " + title);
-    var matched = title.match(".*第.*集");
+    var matched = title.match("(.*第.*集)");
     if(!matched) {
         matched = title.match("(.*)在线播放");
     }
