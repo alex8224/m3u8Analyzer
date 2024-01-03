@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Link Popup</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    #linkInfo {
+      text-align: center;
+    }
+  </style>
+  <script>
+    document.addEventListener("keydown", function(event) {
+      if (event.key === "Escape") {
+        // 关闭弹窗
+        window.close();
+      }
+    });
+  </script>
+</head>
+<body>
+  <p id="linkInfo">Link details will be displayed here</p>
+</body>
+</html>

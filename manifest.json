@@ -3,22 +3,23 @@
   "name": "Request Monitor",
   "version": "1.0",
   "description": "Monitors requests and extracts m3u8 URLs and download it",
-  "permissions": ["webRequest", "tabs", "https://www.olevod.com/", "https://europe.olemovienews.com/", "https://xiaobaotv.net/", "https://m3u.haiwaikan.com/", "https://*.mushroomtrack.com/"],
+  "permissions": ["contextMenus", "webRequest", "tabs", "<all_urls>"],
   "background": {
       "scripts":["background.js"],
       "persistent": true
   },
-  "optional_permissions": [
-    "*://*/*"
-  ],
   "icons": {
     "16": "icon.png",
     "48": "icon.png",
     "128": "icon.png"
   },
   "content_scripts":[{
-      "matches":["https://xiaobaotv.net/*", "https://www.olevod.com/*"],
-      "js":["foreground.js"]
-  }]
+      "matches":["<all_urls>"],
+      "js":["foreground.js", "content.js"]
+  }],
+  "browser_action": {
+    "default_icon": "icon.png",
+    "default_popup": "popup.html"
+  }
 }
 
