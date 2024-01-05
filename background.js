@@ -36,7 +36,6 @@ function print_all_tabs() {
 
 
 chrome.runtime.onInstalled.addListener(function() {
-    setTimeout(print_all_tabs, 5000);
     // 创建WebSocket连接
     createWebSocketConnection();
     chrome.runtime.onMessage.addListener(function(req, sender, sendResponse) {
@@ -116,9 +115,9 @@ function cancelTimeout(handler, state) {
 }
 // 创建WebSocket连接的函数
 function createWebSocketConnection() {
-    var socket;
     var state = "OK"; //  PENDING ERROR CLOSED
-    
+    var socket;
+   
     // WebSocket连接的地址
     var websocketURL = "ws://localhost:8088/";
 
@@ -141,23 +140,13 @@ function createWebSocketConnection() {
         };
 
         // 监听WebSocket连接关闭事件
-        socket.onclose = function(event) {
+        socket.onclose = function (event) {
             console.error("WebSocket连接已关闭");
             state = "CLOSED";
             // 等待N秒后重新尝试创建连接
-            cancelTimeout(timeOutHandler, state); 
-            timeOutHandler = setTimeout(tryCreateWebSocket, 5000);
-        };
-
-        // 监听WebSocket错误事件
-        /* socket.onerror = function(error) {
-            console.error("WebSocket连接发生错误", error);
-            // 关闭连接并等待N秒后重新尝试创建连接
-            socket.close();
-            state = "ERROR";
             cancelTimeout(timeOutHandler, state);
             timeOutHandler = setTimeout(tryCreateWebSocket, 5000);
-        } */;
+        };
     }
 
     // 开始创建WebSocket连接
@@ -168,26 +157,37 @@ function createWebSocketConnection() {
 function listenToWebSocketMessages(socket) {
     if (socket) {
         // 监听WebSocket消息
-        socket.onmessage = function(event) {
+        socket.onmessage = function (event) {
             console.log("已经收到消息" + JSON.stringify(event.data));
             // 解析服务端发送的JSON数据
-            var message = JSON.parse(event.data);
+            try {
+                var message = JSON.parse(event.data);
 
-            // 根据action字段执行对应的操作指令
-            switch (message.action) {
-                case "listTab":
-                    listTabs(socket);
-                    break;
-                case "switchTab":
-                    switchTab(socket, message.param.tabId);
-                    break;
-                case "captureTab":
-                    captureTab(socket, message.param.tabId);
-                    break;
-                default:
-                    console.error("未知的action:", message.action);
+                // 根据action字段执行对应的操作指令
+                switch (message.action) {
+                    case "listTab":
+                        listTabs(socket);
+                        break;
+                    case "switchTab":
+                        switchTab(socket, message.param.tabId);
+                        break;
+                    case "closeTab":
+                        closeTab(socket, message.param.tabId);
+                        break;
+
+                    case "captureTab":
+                        captureTab(socket, message.param.tabId);
+                        break;
+                    default:
+                        console.error("未知的action:", message.action);
+                        sendMessageToWebSocket(socket, {"msg":"不能识别的命令" + event.data});
+                        break;
+                }
+            } catch (e) {
+                console.log("消息无法解析 " + e);
+                sendMessageToWebSocket(socket, {"msg":"不能识别的命令" + event.data});
             }
-        };
+        }
     }
 }
 
@@ -199,7 +199,7 @@ function listTabs(socket) {
         for(var index in allTabs) {
             if(!allTabs[index]) continue;
             let tabInfo = allTabs[index];
-            tabInfos[index] = {"windowId": tabInfo.windowId, "tabId": tabInfo.id, "title": tabInfo.title, "favIconUrl": tabInfo.favIconUrl};
+            tabInfos[index] = {"type":"tab","windowId": tabInfo.windowId, "url":tabInfo.url, "tabId": tabInfo.id, "title": tabInfo.title, "favIconUrl": tabInfo.favIconUrl};
         }
         sendMessageToWebSocket(socket, tabInfos);
     });
@@ -209,6 +209,13 @@ function listTabs(socket) {
 function switchTab(socket, tabId) {
     chrome.tabs.update(tabId, { active: true });
     sendMessageToWebSocket(socket, {"msg":"已经切换到" + tabId});
+}
+
+
+// 切换到指定标签页的函数
+function closeTab(socket, tabId) {
+    chrome.tabs.remove(tabId);
+    sendMessageToWebSocket(socket, {"msg":"标签" + tabId + "已关闭"});
 }
 
 // 捕获指定标签页截图的函数
