@@ -24,17 +24,6 @@ function handle_request(details) {
     }
 }
 
-function print_all_tabs() {
-    console.log("已经注册");
-    chrome.tabs.query({active:false}, function(e) {
-        for(var index in e) {
-            if(!e[index]) continue;
-            console.log("windowId" + e[index].windowId + ", tabId:" + e[index].id + "," + e[index].title + "," + e[index].url + "," + e[index].favIconUrl);    
-        }
-    });
-}
-
-
 chrome.runtime.onInstalled.addListener(function() {
     // 创建WebSocket连接
     createWebSocketConnection();
@@ -166,7 +155,7 @@ function listenToWebSocketMessages(socket) {
                 // 根据action字段执行对应的操作指令
                 switch (message.action) {
                     case "listTab":
-                        listTabs(socket);
+                        listTabs(socket, message.param.query);
                         break;
                     case "switchTab":
                         switchTab(socket, message.param.tabId);
@@ -174,7 +163,9 @@ function listenToWebSocketMessages(socket) {
                     case "closeTab":
                         closeTab(socket, message.param.tabId);
                         break;
-
+                    case "createTab":
+                        createTab(socket, message.param.url);
+                        break;
                     case "captureTab":
                         captureTab(socket, message.param.tabId);
                         break;
@@ -191,24 +182,58 @@ function listenToWebSocketMessages(socket) {
     }
 }
 
-// 查询所有标签页信息的函数
-function listTabs(socket) {
-    chrome.tabs.query({}, function(allTabs) {
-        // 将标签页信息发送回服务端
-        var tabInfos = [];
-        for(var index in allTabs) {
-            if(!allTabs[index]) continue;
-            let tabInfo = allTabs[index];
-            tabInfos[index] = {"type":"tab","windowId": tabInfo.windowId, "url":tabInfo.url, "tabId": tabInfo.id, "title": tabInfo.title, "favIconUrl": tabInfo.favIconUrl};
-        }
-        sendMessageToWebSocket(socket, tabInfos);
+function listTabs(socket, query) {
+    listTabsAsync().then(function(tabs) {
+        searchHistoryAsync(query).then(function(hisItem) {
+            let allList = tabs.concat(hisItem);
+            sendMessageToWebSocket(socket, allList);
+        });
     });
 }
+
+// 查询所有标签页信息的函数
+function listTabsAsync() {
+    return new Promise(function (resolve) {
+        chrome.tabs.query({}, function (allTabs) {
+            // 将标签页信息发送回服务端
+            var tabInfos = [];
+            for (var index in allTabs) {
+                if (!allTabs[index]) continue;
+                let tabInfo = allTabs[index];
+                tabInfos[index] = { "type": "tab", "windowId": tabInfo.windowId, "url": tabInfo.url, "tabId": tabInfo.id, "title": tabInfo.title, "favIconUrl": tabInfo.favIconUrl };
+            }
+            resolve(tabInfos);
+        });
+    });
+}
+
+// 查询所有历史息的函数
+function searchHistoryAsync(query) {
+    return new Promise(function (resolve) {
+        var weeksAgo = Date.now() - (7 * 2 * 24 * 60 * 60 * 1000);
+        chrome.history.search({text: query, maxResults: 10, startTime: weeksAgo}, function (allHisItem) {
+            // 将标签页信息发送回服务端
+            var hisItemInfos = [];
+            for (var index in allHisItem) {
+                let hisInfoItem = allHisItem[index];
+                hisItemInfos[index] = { "type": "history", "id": hisInfoItem.id, "url": hisInfoItem.url, "title": hisInfoItem.title, "visitCount": hisInfoItem.visitCount};
+            }
+            resolve(hisItemInfos);
+        });
+    });
+}
+
 
 // 切换到指定标签页的函数
 function switchTab(socket, tabId) {
     chrome.tabs.update(tabId, { active: true });
     sendMessageToWebSocket(socket, {"msg":"已经切换到" + tabId});
+}
+
+// 切换到指定标签页的函数
+function createTab(socket, url) {
+    chrome.tabs.create({active: true, url: url});
+    sendMessageToWebSocket(socket, {"msg":"已经创建标签" + url});
 }
 
 
