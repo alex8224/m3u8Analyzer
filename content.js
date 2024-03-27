@@ -17,7 +17,7 @@ function createDeleteButton() {
   deleteButton.style.right = '20px';
   deleteButton.style.bottom = '20px';
   deleteButton.style.padding = '10px';
-  deleteButton.style.backgroundColor = 'rgba(255, 0, 0, 0.3)'; // 半透明的红色背景
+  deleteButton.style.backgroundColor = 'rgba(255, 0, 0, 0.5)'; // 半透明的红色背景
   deleteButton.style.color = 'white';
   deleteButton.style.cursor = 'pointer';
   deleteButton.style.borderRadius = '5px';
@@ -34,7 +34,45 @@ function createDeleteButton() {
   document.body.appendChild(deleteButton);
 }
 
-window.onload = createDeleteButton;
+// 函数用于创建frame显示隐藏按钮
+function createShowOrHideButton() {
+  let showOrHideButton = document.createElement('div');
+  showOrHideButton.innerText = '隐藏所有';
+  showOrHideButton.style.position = 'fixed';
+  showOrHideButton.style.right = '20px';
+  showOrHideButton.style.bottom = '80px';
+  showOrHideButton.style.padding = '10px';
+  showOrHideButton.style.backgroundColor = 'rgba(255, 0, 0, 0.5)'; // 半透明的红色背景
+  showOrHideButton.style.color = 'white';
+  showOrHideButton.style.cursor = 'pointer';
+  showOrHideButton.style.borderRadius = '5px';
+  showOrHideButton.style.zIndex = '10000'; // 确保按钮在最顶层
+
+
+  // 按钮的点击事件
+  showOrHideButton.onclick = function () {
+    if (showOrHideButton.innerText == "隐藏所有") {
+      iframesInfo.forEach(function (iframe) {
+        iframe.element.style.display = "none";
+      });
+      showOrHideButton.innerText = "显示所有";
+    }else{
+       iframesInfo.forEach(function (iframe) {
+        iframe.element.style.display = "";
+      });
+      showOrHideButton.innerText = "隐藏所有";
+    }
+  };
+
+  document.body.appendChild(showOrHideButton);
+}
+
+function initFloatButton() {
+  createDeleteButton();
+  createShowOrHideButton();
+}
+
+window.onload = initFloatButton;
 
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
   if (request.action === "openLinkInPopup") {
