@@ -1,5 +1,5 @@
 var TOKEN="j6A9sZ5xkBLxYBlYaFL2qGgF4O3mYbF7RnzJLHpqG1iPNJ"
-var m3u8_file_prefix={"https://www.olevod.com":"index-v1-a1.m3u8", "https://cn.pornhub.com":"", "https://danmu.yhdmjx.com":"", "https://www.mxdm9.com":"", "https://xiaobaotv.net":"", "https://v16m-default.akamaized.net":""}
+var m3u8_file_prefix={"https://www.olevod.com":"index-v1-a1.m3u8",  "https://danmu.yhdmjx.com":"", "https://www.mxdm9.com":"", "https://xiaobaotv.net":"", "https://v16m-default.akamaized.net":""}
 
 function handle_request(details) {
     // console.log("filter url " + details.url + ", type:" + details.type);
@@ -25,8 +25,14 @@ function handle_request(details) {
 }
 
 chrome.runtime.onInstalled.addListener(function() {
+    
+    console.log("扩展已经安装");
+  });
+
+chrome.runtime.onStartup.addListener(function() {
     // 创建WebSocket连接
-    createWebSocketConnection();
+  createWebSocketConnection();
+    console.log("扩展已启动");
     chrome.runtime.onMessage.addListener(function(req, sender, sendResponse) {
         console.log("recv message " + JSON.stringify(req));
         sendResponse({"msg":"active", "id":chrome.runtime.id});
@@ -34,7 +40,19 @@ chrome.runtime.onInstalled.addListener(function() {
     chrome.webRequest.onBeforeSendHeaders.addListener(handle_request, { urls: ["<all_urls>"] }, ['requestHeaders']);
     chrome.contextMenus.create({
         id: "openLinkInPopup",
-        title: "Open Link in Popup",
+        title: "弹窗中打开",
+        contexts: ["link"]
+      });
+
+    chrome.contextMenus.create({
+        id: "searchInPopup",
+        title: "弹窗中搜索",
+        contexts: ["selection"]
+      });
+
+    chrome.contextMenus.create({
+        id: "newTabFrame",
+        title: "浮层打开地址",
         contexts: ["link"]
       });
 
@@ -42,9 +60,15 @@ chrome.runtime.onInstalled.addListener(function() {
         if (info.menuItemId === "openLinkInPopup") {
           chrome.tabs.sendMessage(tab.id, { action: "openLinkInPopup", linkUrl: info.linkUrl });
         }
+        if (info.menuItemId === "searchInPopup") {
+          chrome.tabs.sendMessage(tab.id, { action: "searchInPopup", selectionText: info.selectionText});
+        }
+        if (info.menuItemId === "newTabFrame") {
+          chrome.tabs.sendMessage(tab.id, { action: "newTabFrame", linkUrl: info.linkUrl});
+        }
+
       });
 });
-
 
 function url_isvalid(url) {
    for(let key in m3u8_file_prefix) {
@@ -69,7 +93,7 @@ function callApi(init_url, url, headers, type="m3u8") {
                     console.log(headers[i].name, headers[i].value);
                     pass_header[headers[i].name]=headers[i].value;
                 }
-                download_url = "http://crt.87868.ink/m3u8/?m3u8="+url+"&token="+TOKEN + "&epname="+ epname +"&header=" +encodeURIComponent(JSON.stringify(pass_header));
+                download_url = "http://192.3.251.177/m3u8/?m3u8="+url+"&token="+TOKEN + "&epname="+ epname +"&header=" +encodeURIComponent(JSON.stringify(pass_header));
                 download_url +="&mediaType=" + type;
                 fetch(download_url).then(function(resp){}).catch(function(ex){console.log(ex);});
                 break;
@@ -102,6 +126,10 @@ function cancelTimeout(handler, state) {
     console.log("取消timeout 执行" + handler + " state=" + state);
     if(handler) clearTimeout(handler);
 }
+// {id:"tabId", "tab":{}, "times":访问次数}
+var switchHistory = {};
+var switchHistoryList = [];
+
 // 创建WebSocket连接的函数
 function createWebSocketConnection() {
     var state = "OK"; //  PENDING ERROR CLOSED
@@ -147,7 +175,7 @@ function listenToWebSocketMessages(socket) {
     if (socket) {
         // 监听WebSocket消息
         socket.onmessage = function (event) {
-            console.log("已经收到消息" + JSON.stringify(event.data));
+            //console.log("已经收到消息" + JSON.stringify(event.data));
             // 解析服务端发送的JSON数据
             try {
                 var message = JSON.parse(event.data);
@@ -159,6 +187,9 @@ function listenToWebSocketMessages(socket) {
                         break;
                     case "switchTab":
                         switchTab(socket, message.param.tabId);
+                        break;
+                    case "listTabTop":
+                        queryTopTab(socket, message.param.top);
                         break;
                     case "closeTab":
                         closeTab(socket, message.param.tabId);
@@ -183,9 +214,12 @@ function listenToWebSocketMessages(socket) {
 }
 
 function listTabs(socket, query) {
+    let now = new Date();
     listTabsAsync().then(function(tabs) {
         searchHistoryAsync(query).then(function(hisItem) {
             let allList = tabs.concat(hisItem);
+            let duration = (new Date() - now) / 1000;
+            console.log(`查询 ${query} 耗时 ${duration}ms`);
             sendMessageToWebSocket(socket, allList);
         });
     });
@@ -210,8 +244,8 @@ function listTabsAsync() {
 // 查询所有历史息的函数
 function searchHistoryAsync(query) {
     return new Promise(function (resolve) {
-        var weeksAgo = Date.now() - (7 * 2 * 24 * 60 * 60 * 1000);
-        chrome.history.search({text: query, maxResults: 10, startTime: weeksAgo}, function (allHisItem) {
+        var weeksAgo = Date.now() - (180 * 24 * 60 * 60 * 1000);
+        chrome.history.search({text: query, maxResults: 100, startTime: weeksAgo}, function (allHisItem) {
             // 将标签页信息发送回服务端
             var hisItemInfos = [];
             for (var index in allHisItem) {
@@ -223,11 +257,44 @@ function searchHistoryAsync(query) {
     });
 }
 
+function searchTabHis(tabId) {
+    for(let i in switchHistoryList) {
+        if(switchHistoryList[i]["tabId"] === tabId) return switchHistoryList[i];
+    }
+    return null;
+}
+
+function recordTabHistory(tabId) {
+    chrome.tabs.get(tabId, function (tabInfo) {
+        console.log("get tab" + tabInfo);
+        try {
+            let tabE = searchTabHis(tabId);
+            if (tabE === null) {
+                switchHistoryList.push({ "times": 1, "type": "tab", "windowId": tabInfo.windowId, "url": tabInfo.url, "tabId": tabInfo.id, "title": tabInfo.title, "favIconUrl": tabInfo.favIconUrl });
+            } else {
+                tabE["times"] += 1
+            }
+        } catch (e) {
+            console.log("记录切换日志失败" + e);
+        }
+    });
+}
+
+function queryTopTab(socket, cnt) {
+    switchHistoryList.sort((a,b) => b.times - a.times);
+    let topN = switchHistoryList.slice(0, cnt);
+    sendMessageToWebSocket(socket, topN);
+}
+
+function removeTabHis(tabId) {
+    switchHistoryList = switchHistoryList.filter(e => e["tabId"] != tabId);
+}
 
 // 切换到指定标签页的函数
 function switchTab(socket, tabId) {
     chrome.tabs.update(tabId, { active: true });
     sendMessageToWebSocket(socket, {"msg":"已经切换到" + tabId});
+    recordTabHistory(tabId);
 }
 
 // 切换到指定标签页的函数
@@ -241,6 +308,7 @@ function createTab(socket, url) {
 function closeTab(socket, tabId) {
     chrome.tabs.remove(tabId);
     sendMessageToWebSocket(socket, {"msg":"标签" + tabId + "已关闭"});
+    removeTabHis(tabId);
 }
 
 // 捕获指定标签页截图的函数
