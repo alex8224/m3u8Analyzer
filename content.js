@@ -1,5 +1,6 @@
 let iframesInfo = [];
 let expandedIframe = null; // 用于跟踪当前放大的iframe
+let altKeyDown = false; //是否按下了alt 键
 
 const OFFSET = 50; // 每个iframe之间的间距
 const IFRAME_WIDTH_PERCENT = 40// iframe宽度占屏幕的百分比
@@ -99,10 +100,27 @@ function initFloatButton() {
 
 
 function regMouseEvt() {
+  document.addEventListener('keydown', function(event) {
+    if(event.key == "Alt") {
+      altKeyDown = true;  
+    }
+  });
+
+  document.addEventListener('keyup', function (event) {
+    if (event.key == "Alt") {
+      altKeyDown = false;
+    }
+  });
+
   document.addEventListener('mouseover', function(event) {
+    document.body.focus();
     const target = event.target;
 
     if (target.tagName === 'A') {
+      if(!altKeyDown) {
+            // alt 按下后才创建菜单
+            return;
+          }
         let menu = document.getElementById('my-extension-open-menu');
         if (!menu) {
             menu = document.createElement('div');
@@ -155,7 +173,9 @@ function regMouseEvt() {
   // 添加全局点击事件监听器，以隐藏按钮
   document.addEventListener('click', function (event) {
     const openMenu= document.getElementById('my-extension-open-menu');
-    openMenu.parentNode.removeChild(openMenu);
+    if(openMenu) {
+      openMenu.parentNode.removeChild(openMenu);
+    }
   });
 }
 
