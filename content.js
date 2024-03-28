@@ -99,37 +99,64 @@ function initFloatButton() {
 
 
 function regMouseEvt() {
-  document.addEventListener('mouseover', function (event) {
+  document.addEventListener('mouseover', function(event) {
     const target = event.target;
 
     if (target.tagName === 'A') {
-      let openButton = document.getElementById('my-extension-open-button');
-      if (!openButton) {
-        openButton = document.createElement('button');
-        openButton.id = 'my-extension-open-button';
-        openButton.textContent = '浮动窗口打开';
-        document.body.appendChild(openButton);
+        let menu = document.getElementById('my-extension-open-menu');
+        if (!menu) {
+            menu = document.createElement('div');
+            menu.id = 'my-extension-open-menu';
+            menu.style.position = 'absolute';
+            menu.style.zIndex = '10000';
+            menu.style.backgroundColor = 'rgba(0, 0, 0, 0.5)'; // 半透明的黑色背景
+            menu.style.color = 'white';
+            menu.style.borderRadius = '8px'; // 圆角边框
+            menu.style.padding = '5px';
+            menu.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)'; // 轻微的阴影效果
+            menu.style.cursor = 'default';
+            menu.style.display = 'none';
+            menu.style.fontSize = "10pt";
 
-        openButton.style.position = 'absolute';
-        openButton.style.zIndex = '10000';
-        openButton.onclick = function () {
-          createTabFrame({action: "newTabFrame", linkUrl: target.href});
-          console.log(`已发送打开浮动打开请求 ${target.href}`);
-        };
-      }
+            const menuItemStyle = 'padding: 5px 10px; cursor: pointer; transition: background-color 0.2s;';
+            const menuItemHoverStyle = 'background-color: rgba(255, 255, 255, 0.2);';
 
-      openButton.style.left = `${event.pageX + 10}px`;
-      openButton.style.top = `${event.pageY + 10}px`;
-      openButton.style.display = 'block';
+            const openNewWindowOption = document.createElement('div');
+            openNewWindowOption.textContent = '在新窗口打开';
+            openNewWindowOption.style.cssText = menuItemStyle;
+            openNewWindowOption.onmouseover = () => openNewWindowOption.style.cssText = menuItemStyle + menuItemHoverStyle;
+            openNewWindowOption.onmouseout = () => openNewWindowOption.style.cssText = menuItemStyle;
+            openNewWindowOption.onclick = () => {
+                openLinkInPopup({action: "openLinkInPopup", linkUrl: target.href});
+            };
+
+            const openFloatingWindowOption = document.createElement('div');
+            openFloatingWindowOption.textContent = '在浮动窗口打开';
+            openFloatingWindowOption.style.cssText = menuItemStyle;
+            openFloatingWindowOption.onmouseover = () => openFloatingWindowOption.style.cssText = menuItemStyle + menuItemHoverStyle;
+            openFloatingWindowOption.onmouseout = () => openFloatingWindowOption.style.cssText = menuItemStyle;
+            openFloatingWindowOption.onclick = () => {
+                createTabFrame({action: "newTabFrame", linkUrl: target.href});
+            };
+
+            menu.appendChild(openNewWindowOption);
+            menu.appendChild(openFloatingWindowOption);
+
+            document.body.appendChild(menu);
+        }
+
+        menu.style.left = `${event.pageX + 10}px`;
+        menu.style.top = `${event.pageY + 10}px`;
+        menu.style.display = 'block';
     }
-  });
+});
+
   
   // 添加全局点击事件监听器，以隐藏按钮
   document.addEventListener('click', function (event) {
-    const openButton = document.getElementById('my-extension-open-button');
-    openButton.parentNode.removeChild(openButton);
+    const openMenu= document.getElementById('my-extension-open-menu');
+    openMenu.parentNode.removeChild(openMenu);
   });
-
 }
 
 window.onload = initFloatButton;
@@ -184,22 +211,26 @@ function addTitleBar(iframeWrapper) {
   iframeWrapper.appendChild(titleBar);
 }
 
+function openLinkInPopup(request) {
+  const linkUrl = request.linkUrl;
+  const screenWidth = window.screen.width;
+  const screenHeight = window.screen.height;
+  const popupWidth = screenWidth * 0.7; // 设置弹窗的宽度
+  const popupHeight = screenHeight * 0.7; // 设置弹窗的高度
+
+  const left = (screenWidth - popupWidth) / 2;
+  const top = (screenHeight - popupHeight) / 2;
+
+  const popupWindow = window.open(linkUrl, "LinkPopup", `width=${popupWidth},height=${popupHeight},left=${left},top=${top},location=no`);
+  
+  if (popupWindow) {
+    popupWindow.focus();
+  }
+}
+
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
   if (request.action === "openLinkInPopup") {
-    const linkUrl = request.linkUrl;
-    const screenWidth = window.screen.width;
-    const screenHeight = window.screen.height;
-    const popupWidth = screenWidth * 0.7; // 设置弹窗的宽度
-    const popupHeight = screenHeight * 0.7; // 设置弹窗的高度
-
-    const left = (screenWidth - popupWidth) / 2;
-    const top = (screenHeight - popupHeight) / 2;
-
-    const popupWindow = window.open(linkUrl, "LinkPopup", `width=${popupWidth},height=${popupHeight},left=${left},top=${top},location=no`);
-    
-    if (popupWindow) {
-      popupWindow.focus();
-    }
+      openLinkInPopup(request);
   }
   
   if (request.action === "searchInPopup") {
