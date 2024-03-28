@@ -98,55 +98,7 @@ function initFloatButton() {
 
 window.onload = initFloatButton;
 
-function addDragIframe(iframeWrapper) {
-  let isCtrlPressed = false;
-    let isDragging = false;
-    let startX, startY, origX, origY;
-
-    // 按下Ctrl键时启用拖动
-    iframeWrapper.addEventListener('keydown', function(event) {
-        if (event.key === "Control") {
-            isCtrlPressed = true;
-            iframeWrapper.style.cursor = 'move';
-        }
-    });
-
-    iframeWrapper.addEventListener('keyup', function(event) {
-        if (event.key === "Control") {
-            isCtrlPressed = false;
-            isDragging = false;
-            iframeWrapper.style.cursor = '';
-        }
-    });
-
-    iframeWrapper.addEventListener('mousedown', function(event) {
-        if (isCtrlPressed) {
-            isDragging = true;
-            startX = event.clientX;
-            startY = event.clientY;
-            origX = iframeWrapper.offsetLeft;
-            origY = iframeWrapper.offsetTop;
-            event.preventDefault(); // 阻止默认行为
-        }
-    });
-
-    iframeWrapper.addEventListener('mousemove', function(event) {
-        if (isDragging) {
-            const moveX = event.clientX - startX;
-            const moveY = event.clientY - startY;
-            iframeWrapper.style.left = `${origX + moveX}px`;
-            iframeWrapper.style.top = `${origY + moveY}px`;
-        }
-    });
-
-    iframeWrapper.addEventListener('mouseup', function(event) {
-        if (isDragging) {
-            isDragging = false;
-        }
-    }); 
-}
-
-function addTitleBar(iframeWrapper, left=0, top=0) {
+function addTitleBar(iframeWrapper) {
   // 创建标题栏
   let iframeDimension = getIframeDimension();
   let titleBar = document.createElement('div');
@@ -195,13 +147,13 @@ function addTitleBar(iframeWrapper, left=0, top=0) {
 
   iframeWrapper.appendChild(titleBar);
 
-  iframesInfo.push({
+/*   iframesInfo.push({
       element: iframeWrapper,
       originalWidth: iframeDimension.width,
       originalHeight: iframeDimension.height,
       originalLeft: left,
       originalTop: top
-  });
+  }) */;
 }
 
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
@@ -286,12 +238,14 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     
     iframeWrapper.appendChild(closeButton);
     iframeWrapper.appendChild(iframe);
-  
+    let newLeft = 0;
+    let newTop = 0;
+
     // 设置iframe的位置
     if (iframesInfo.length > 0) {
       let lastIframeInfo = iframesInfo[iframesInfo.length - 1];
-      let newLeft = lastIframeInfo.originalLeft+ iframeDimension.width + OFFSET;
-      let newTop = lastIframeInfo.originalTop;
+      newLeft = lastIframeInfo.originalLeft+ iframeDimension.width + OFFSET;
+      newTop = lastIframeInfo.originalTop;
   
       // 检查是否超出屏幕宽度
       if (newLeft + iframeDimension.width > window.innerWidth) {
@@ -302,26 +256,57 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
       iframeWrapper.style.left = `${newLeft}px`;
       iframeWrapper.style.top = `${newTop}px`;
   
-      addTitleBar(iframeWrapper, newLeft, newTop);
-      //iframesInfo.push({ // 更新信息
-      //  top: newTop,
-      //  left: newLeft,
-      //  element: iframeWrapper
-      //});
+      iframesInfo.push({
+        element: iframeWrapper,
+        originalWidth: iframeDimension.width,
+        originalHeight: iframeDimension.height,
+        originalLeft: newLeft,
+        originalTop: newTop 
+      });
     } else {
       // 如果是第一个iframe，放置在左上角
       iframeWrapper.style.left = `0px`;
       iframeWrapper.style.top = `0px`;
-  
-    addTitleBar(iframeWrapper);
-      //if/* ramesInfo.push({
-      //  top: 0,
-      //  left: 0,
-      //  element: iframeWrapper
-      //}); */
+
+      iframesInfo.push({
+        element: iframeWrapper,
+        originalWidth: iframeDimension.width,
+        originalHeight: iframeDimension.height,
+        originalLeft: newLeft,
+        originalTop: newTop
+      });
     }
+    
+    addTitleBar(iframeWrapper);
     updateCounter();
   
     document.body.appendChild(iframeWrapper);
+  }
+  
+  // 在不同的iframewrapper间切换
+  if (request.action === "toggleIframe") {
+    if (expandedIframe) {
+      // 恢复当前放大的iframeWrapper的大小和位置
+      expandedIframe.element.style.width = `${expandedIframe.originalWidth}px`;
+      expandedIframe.element.style.height = `${expandedIframe.originalHeight}px`;
+      expandedIframe.element.style.left = `${expandedIframe.originalLeft}px`;
+      expandedIframe.element.style.top = `${expandedIframe.originalTop}px`;
+      expandedIframe.element.style.zIndex = parseInt(expandedIframe.element.style.zIndex) - 1;
+    }
+
+    let nextIndex = iframesInfo.indexOf(expandedIframe) + 1;
+    if (nextIndex >= iframesInfo.length || nextIndex === 0) {
+      nextIndex = 0; // 循环回到第一个iframe
+    }
+
+    const nextIframe = iframesInfo[nextIndex];
+
+    // 移动到屏幕中间并调整大小
+    nextIframe.element.style.width = `${window.innerWidth * 0.8}px`;
+    nextIframe.element.style.height = `${window.innerHeight * 0.8}px`;
+    nextIframe.element.style.left = `${window.innerWidth * 0.1}px`;
+    nextIframe.element.style.top = `${window.innerHeight * 0.1}px`;
+    nextIframe.element.style.zIndex = parseInt(nextIframe.element.style.zIndex) + 1;
+    expandedIframe = nextIframe;
   }
 });
