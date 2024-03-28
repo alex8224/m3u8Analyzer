@@ -22,11 +22,17 @@
     "default_popup": "popup.html"
   },
   "commands": {
-    "toggle_iframe": {
+    "toggleIframe": {
         "suggested_key": {
             "default": "Alt+Shift+Q"
         },
         "description": "Toggle iframe sizes"
+    },
+    "closeIframe": {
+        "suggested_key": {
+            "default": "Alt+Shift+W"
+        },
+        "description": "Close Current iframe"
     }
 }
 }

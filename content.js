@@ -94,6 +94,42 @@ function createShowOrHideButton() {
 function initFloatButton() {
   createDeleteButton();
   createShowOrHideButton();
+  regMouseEvt();
+}
+
+
+function regMouseEvt() {
+  document.addEventListener('mouseover', function (event) {
+    const target = event.target;
+
+    if (target.tagName === 'A') {
+      let openButton = document.getElementById('my-extension-open-button');
+      if (!openButton) {
+        openButton = document.createElement('button');
+        openButton.id = 'my-extension-open-button';
+        openButton.textContent = '浮动窗口打开';
+        document.body.appendChild(openButton);
+
+        openButton.style.position = 'absolute';
+        openButton.style.zIndex = '10000';
+        openButton.onclick = function () {
+          createTabFrame({action: "newTabFrame", linkUrl: target.href});
+          console.log(`已发送打开浮动打开请求 ${target.href}`);
+        };
+      }
+
+      openButton.style.left = `${event.pageX + 10}px`;
+      openButton.style.top = `${event.pageY + 10}px`;
+      openButton.style.display = 'block';
+    }
+  });
+  
+  // 添加全局点击事件监听器，以隐藏按钮
+  document.addEventListener('click', function (event) {
+    const openButton = document.getElementById('my-extension-open-button');
+    openButton.parentNode.removeChild(openButton);
+  });
+
 }
 
 window.onload = initFloatButton;
@@ -146,14 +182,6 @@ function addTitleBar(iframeWrapper) {
   };
 
   iframeWrapper.appendChild(titleBar);
-
-/*   iframesInfo.push({
-      element: iframeWrapper,
-      originalWidth: iframeDimension.width,
-      originalHeight: iframeDimension.height,
-      originalLeft: left,
-      originalTop: top
-  }) */;
 }
 
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
@@ -191,10 +219,51 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     if (popupWindow) {
       popupWindow.focus();
     }
-
   }
   
-  if(request.action == "newTabFrame") {
+  // 在不同的iframewrapper间切换
+  if (request.action === "toggleIframe") {
+    if (expandedIframe) {
+      // 恢复当前放大的iframeWrapper的大小和位置
+      expandedIframe.element.style.width = `${expandedIframe.originalWidth}px`;
+      expandedIframe.element.style.height = `${expandedIframe.originalHeight}px`;
+      expandedIframe.element.style.left = `${expandedIframe.originalLeft}px`;
+      expandedIframe.element.style.top = `${expandedIframe.originalTop}px`;
+      expandedIframe.element.style.zIndex = parseInt(expandedIframe.element.style.zIndex) - 1;
+    }
+
+    let nextIndex = iframesInfo.indexOf(expandedIframe) + 1;
+    if (nextIndex >= iframesInfo.length || nextIndex === 0) {
+      nextIndex = 0; // 循环回到第一个iframe
+    }
+
+    const nextIframe = iframesInfo[nextIndex];
+
+    // 移动到屏幕中间并调整大小
+    nextIframe.element.style.width = `${window.innerWidth * 0.8}px`;
+    nextIframe.element.style.height = `${window.innerHeight * 0.8}px`;
+    nextIframe.element.style.left = `${window.innerWidth * 0.1}px`;
+    nextIframe.element.style.top = `${window.innerHeight * 0.1}px`;
+    nextIframe.element.style.zIndex = parseInt(nextIframe.element.style.zIndex) + 1;
+    expandedIframe = nextIframe;
+  }
+  
+  if (request.action == "newTabFrame") {
+    createTabFrame(request);
+  }
+
+  if(request.action == "closeIframe") {
+    if(expandedIframe) {
+      //TODO 
+      expandedIframe.element.parentNode.removeChild(expandedIframe.element);
+      iframesInfo = iframesInfo.filter(info => info!= expandedIframe);
+      updateCounter();
+    }
+  }
+});
+
+
+function createTabFrame(request) {
     let iframeDimension = getIframeDimension();
     let iframeWrapper = document.createElement('div');
     iframeWrapper.style.position = 'fixed';
@@ -279,34 +348,5 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     
     addTitleBar(iframeWrapper);
     updateCounter();
-  
     document.body.appendChild(iframeWrapper);
-  }
-  
-  // 在不同的iframewrapper间切换
-  if (request.action === "toggleIframe") {
-    if (expandedIframe) {
-      // 恢复当前放大的iframeWrapper的大小和位置
-      expandedIframe.element.style.width = `${expandedIframe.originalWidth}px`;
-      expandedIframe.element.style.height = `${expandedIframe.originalHeight}px`;
-      expandedIframe.element.style.left = `${expandedIframe.originalLeft}px`;
-      expandedIframe.element.style.top = `${expandedIframe.originalTop}px`;
-      expandedIframe.element.style.zIndex = parseInt(expandedIframe.element.style.zIndex) - 1;
-    }
-
-    let nextIndex = iframesInfo.indexOf(expandedIframe) + 1;
-    if (nextIndex >= iframesInfo.length || nextIndex === 0) {
-      nextIndex = 0; // 循环回到第一个iframe
-    }
-
-    const nextIframe = iframesInfo[nextIndex];
-
-    // 移动到屏幕中间并调整大小
-    nextIframe.element.style.width = `${window.innerWidth * 0.8}px`;
-    nextIframe.element.style.height = `${window.innerHeight * 0.8}px`;
-    nextIframe.element.style.left = `${window.innerWidth * 0.1}px`;
-    nextIframe.element.style.top = `${window.innerHeight * 0.1}px`;
-    nextIframe.element.style.zIndex = parseInt(nextIframe.element.style.zIndex) + 1;
-    expandedIframe = nextIframe;
-  }
-});
+}
