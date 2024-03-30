@@ -2,8 +2,8 @@ let iframesInfo = [];
 let expandedIframe = null; // 用于跟踪当前放大的iframe
 let altKeyDown = false; //是否按下了alt 键
 
-const OFFSET = 50; // 每个iframe之间的间距
-const IFRAME_WIDTH_PERCENT = 40// iframe宽度占屏幕的百分比
+const OFFSET = 20; // 每个iframe之间的间距
+const IFRAME_WIDTH_PERCENT = 47// iframe宽度占屏幕的百分比
 
 function getIframeDimension() {
   return {
@@ -11,7 +11,6 @@ function getIframeDimension() {
     height: window.innerHeight * (IFRAME_WIDTH_PERCENT / 100)
   };
 }
-
 
 function updateCounter() {
   let counter = document.getElementById('iframe-counter');
@@ -92,7 +91,53 @@ function createShowOrHideButton() {
   document.body.appendChild(showOrHideButton);
 }
 
+function createToggleSched() {
+
+  // 页面加载时执行
+    const button = document.createElement('button');
+    button.textContent = '切换';
+    button.style.position = 'fixed';
+    button.style.right = '55px';
+    button.style.bottom = '130px';
+    button.style.backgroundColor = 'rgba(255, 0, 0, 0.5)'; // 半透明的红色背景
+    button.style.color = 'white';
+    button.style.border = 'none';
+    button.style.padding = '10px';
+    button.style.borderRadius = '5px';
+
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.style.position = 'fixed';
+    input.style.right = "19px";
+    input.style.bottom = '131px';
+    input.style.width = "30px";
+    input.style.height = "30px";
+
+    document.body.appendChild(button);
+    document.body.appendChild(input);
+
+    let intervalId = null;
+
+    button.onclick = function () {
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+        button.textContent = '切换';
+      } else {
+        const seconds = parseInt(input.value, 10) || 5; // 默认5秒
+        intervalId = setInterval(function () {
+          // 调用切换iframe的函数
+          // 示例中并没有具体实现切换逻辑，需要根据实际情况编写
+          toggleIframe();
+        }, seconds * 1000);
+
+        button.textContent = '停止';
+      }
+    };
+}
+
 function initFloatButton() {
+  createToggleSched();
   createDeleteButton();
   createShowOrHideButton();
   regMouseEvt();
@@ -248,6 +293,32 @@ function openLinkInPopup(request) {
   }
 }
 
+function toggleIframe(request) {
+  if (expandedIframe) {
+    // 恢复当前放大的iframeWrapper的大小和位置
+    expandedIframe.element.style.width = `${expandedIframe.originalWidth}px`;
+    expandedIframe.element.style.height = `${expandedIframe.originalHeight}px`;
+    expandedIframe.element.style.left = `${expandedIframe.originalLeft}px`;
+    expandedIframe.element.style.top = `${expandedIframe.originalTop}px`;
+    expandedIframe.element.style.zIndex = parseInt(expandedIframe.element.style.zIndex) - 1;
+  }
+
+  let nextIndex = iframesInfo.indexOf(expandedIframe) + 1;
+  if (nextIndex >= iframesInfo.length || nextIndex === 0) {
+    nextIndex = 0; // 循环回到第一个iframe
+  }
+
+  const nextIframe = iframesInfo[nextIndex];
+
+  // 移动到屏幕中间并调整大小
+  nextIframe.element.style.width = `${window.innerWidth * 0.8}px`;
+  nextIframe.element.style.height = `${window.innerHeight * 0.8}px`;
+  nextIframe.element.style.left = `${window.innerWidth * 0.1}px`;
+  nextIframe.element.style.top = `${window.innerHeight * 0.1}px`;
+  nextIframe.element.style.zIndex = parseInt(nextIframe.element.style.zIndex) + 1;
+  expandedIframe = nextIframe;
+}
+
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
   if (request.action === "openLinkInPopup") {
       openLinkInPopup(request);
@@ -274,29 +345,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
   
   // 在不同的iframewrapper间切换
   if (request.action === "toggleIframe") {
-    if (expandedIframe) {
-      // 恢复当前放大的iframeWrapper的大小和位置
-      expandedIframe.element.style.width = `${expandedIframe.originalWidth}px`;
-      expandedIframe.element.style.height = `${expandedIframe.originalHeight}px`;
-      expandedIframe.element.style.left = `${expandedIframe.originalLeft}px`;
-      expandedIframe.element.style.top = `${expandedIframe.originalTop}px`;
-      expandedIframe.element.style.zIndex = parseInt(expandedIframe.element.style.zIndex) - 1;
-    }
-
-    let nextIndex = iframesInfo.indexOf(expandedIframe) + 1;
-    if (nextIndex >= iframesInfo.length || nextIndex === 0) {
-      nextIndex = 0; // 循环回到第一个iframe
-    }
-
-    const nextIframe = iframesInfo[nextIndex];
-
-    // 移动到屏幕中间并调整大小
-    nextIframe.element.style.width = `${window.innerWidth * 0.8}px`;
-    nextIframe.element.style.height = `${window.innerHeight * 0.8}px`;
-    nextIframe.element.style.left = `${window.innerWidth * 0.1}px`;
-    nextIframe.element.style.top = `${window.innerHeight * 0.1}px`;
-    nextIframe.element.style.zIndex = parseInt(nextIframe.element.style.zIndex) + 1;
-    expandedIframe = nextIframe;
+    toggleIframe(request); 
   }
   
   if (request.action == "newTabFrame") {
