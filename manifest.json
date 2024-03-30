@@ -33,7 +33,13 @@
             "default": "Alt+Shift+W"
         },
         "description": "Close Current iframe"
-    }
+    },
+     "toggleBtn": {
+            "suggested_key": {
+                "default": "Alt+Shift+H"
+            },
+            "description": "Toggle enchance button group"
+        }
 }
 }
 

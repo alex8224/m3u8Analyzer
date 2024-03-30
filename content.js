@@ -34,7 +34,9 @@ function updateCounter() {
 // 函数用于创建删除按钮
 function createDeleteButton() {
   let deleteButton = document.createElement('div');
+  deleteButton.style.display = "none";
   deleteButton.innerText = '删除所有';
+  deleteButton.id = "delBtn";
   deleteButton.style.position = 'fixed';
   deleteButton.style.right = '20px';
   deleteButton.style.bottom = '20px';
@@ -60,6 +62,7 @@ function createDeleteButton() {
 // 函数用于创建frame显示隐藏按钮
 function createShowOrHideButton() {
   let showOrHideButton = document.createElement('div');
+  showOrHideButton.style.display = "none";
   showOrHideButton.id = "showOrHideBtn";
   showOrHideButton.innerText = '显示所有';
   showOrHideButton.style.position = 'fixed';
@@ -95,6 +98,8 @@ function createToggleSched() {
 
   // 页面加载时执行
     const button = document.createElement('button');
+  button.id = "toggleBtn";
+    button.style.display = "none";
     button.textContent = '切换';
     button.style.position = 'fixed';
     button.style.right = '55px';
@@ -106,6 +111,8 @@ function createToggleSched() {
     button.style.borderRadius = '5px';
 
     const input = document.createElement('input');
+    input.style.display = "none";
+    input.id = "timeInput";
     input.type = 'number';
     input.style.position = 'fixed';
     input.style.right = "19px";
@@ -359,6 +366,20 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
       iframesInfo = iframesInfo.filter(info => info!= expandedIframe);
       updateCounter();
     }
+  }
+  
+  if (request.action == "toggleBtn") {
+    let showOrHide = "";
+    if (document.getElementById("toggleBtn").style.display == "") {
+      showOrHide = "none";
+    } else {
+      showOrHide = "";
+    }
+
+      document.getElementById("toggleBtn").style.display = showOrHide;
+      document.getElementById("delBtn").style.display = showOrHide;
+      document.getElementById("showOrHideBtn").style.display = showOrHide;
+      document.getElementById("timeInput").style.display = showOrHide;
   }
 });
 
